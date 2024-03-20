@@ -1,73 +1,96 @@
+//This Script has Mouse Controll, Movement, Jump
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] public float moveSpeed = 5f;
-    [SerializeField] public float rotationSpeed = 5f;
-    [SerializeField] public float jumpForce = 5f;
-    [SerializeField] public GameObject weapon;
-    [SerializeField] public Transform firePoint;
-    [SerializeField] private float projectileSpeed = 10f;
-    [SerializeField] public GameObject projectilePrefab;
-    [SerializeField] public int maxHealth = 100;
+    [Header("Movement")]
+    public float moveSpeed;
+    public float groundDrag;
 
-    private Rigidbody rb;
-    private int PlayerHealth;
+    public float jumpForce;
+    public float jumpCooldown;
+    public float airMultiplier;
+    bool readyToJump;
+
+    [Header("Keybinds")]
+    public KeyCode jumpKey = KeyCode.Space;
+
+    [Header("Ground Check")]
+    public float playerHeight;
+    public LayerMask whatIsGround;
+    bool grounded;
+    public Transform orientataion;
+    float horizontalInput;
+    float verticalInput;
+    Vector3 moveDirection;
+    Rigidbody rb;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        PlayerHealth = maxHealth;
+        rb.freezeRotation = true;
+        readyToJump = true;
     }
 
     private void Update()
     {
-        // Movement
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-        Vector3 moveDirection = new Vector3(horizontal, 0, vertical) * moveSpeed * Time.deltaTime;
-        transform.Translate(moveDirection);
+        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
 
-        // Rotation
-        float mouseX = Input.GetAxis("Mouse X");
-        transform.Rotate(Vector3.up, mouseX * rotationSpeed);
+        MyInput();
 
-        // Jump
-        if (Input.GetKeyDown(KeyCode.Space) && IsGrounded())
+        //handle drag
+        if (grounded)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            rb.drag = groundDrag;
         }
-
-        // Shooting
-        if (Input.GetMouseButtonDown(0))
+        else
         {
-            Shoot();
+            rb.drag = 0;
         }
     }
 
-    private bool IsGrounded()
+    private void FixedUpdate()
     {
-        return Physics.Raycast(transform.position, Vector3.down, 0.1f);
+        MovePlayer();
     }
 
-    private void Shoot()
+    private void MyInput()
     {
-        GameObject projectile = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
-        Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
-        projectileRb.velocity = firePoint.forward * projectileSpeed;
-    }
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
 
-    public void TakeDamage(int damage)
-    {
-        PlayerHealth -= damage;
-        if (PlayerHealth <= 0)
+        //when jump
+        if(Input.GetKey(jumpKey) && readyToJump && grounded)
         {
-            Die();
+            readyToJump = false;
+
+            Jump();
+
+            Invoke(nameof(ResetJump), jumpCooldown);
         }
     }
 
-    private void Die()
+    private void MovePlayer()
     {
-        // Implement death logic here, such as respawning or game over
+        //calc move dirct
+        moveDirection = orientataion.forward * verticalInput + orientataion.right * horizontalInput;
+        //on ground
+        if(grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
+        //in air
+        else if(!grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
+    }
+
+    private void Jump()
+    {
+        //reset y velo
+        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+    }
+
+    private void ResetJump()
+    {
+        readyToJump = true;
     }
 }
