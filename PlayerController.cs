@@ -11,6 +11,8 @@ public class PlayerController : MonoBehaviour
     public float jumpCooldown;
     public float airMultiplier;
     bool readyToJump;
+    private Animator animator;
+    private float speed;
 
     [Header("Keybinds")]
     public KeyCode jumpKey = KeyCode.Space;
@@ -27,6 +29,7 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
+        animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
         readyToJump = true;
@@ -58,6 +61,7 @@ public class PlayerController : MonoBehaviour
     {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
+        speed = Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput);
 
         //when jump
         if(Input.GetKey(jumpKey) && readyToJump && grounded)
@@ -72,6 +76,7 @@ public class PlayerController : MonoBehaviour
 
     private void MovePlayer()
     {
+        animator.SetFloat("Speed", speed);
         //calc move dirct
         moveDirection = orientataion.forward * verticalInput + orientataion.right * horizontalInput;
         //on ground
@@ -92,5 +97,11 @@ public class PlayerController : MonoBehaviour
     private void ResetJump()
     {
         readyToJump = true;
+    }
+
+    private void Die()
+    {
+        //Death Logic
+        //animator.SetTrigger("JumpTrigger");
     }
 }
